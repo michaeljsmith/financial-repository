@@ -28,6 +28,7 @@ _income = 0
 _rent = 0
 _principal = 0
 _repayment = 0
+_property = 0
 
 _values = []
 
@@ -47,6 +48,7 @@ def clear():
   global _rent
   global _principal
   global _repayment
+  global _property
 
   _time = 0
   _balance = 0
@@ -54,10 +56,11 @@ def clear():
   _rent = 0
   _principal = 0
   _repayment = 0
+  _property = 0
   _values = []
 
 def report():
-  _values.append(_balance - _principal)
+  _values.append(_balance + _property - _principal)
 
 def take_job(income):
   global _income
@@ -102,8 +105,12 @@ def work_solidly():
 
 def buy_home(price):
   global _balance
-  _balance -= stamp_duty(price)
-  take_loan(price)
+  global _property
+  total = price + stamp_duty(price)
+  loan_amount = max(0, total - _balance)
+  take_loan(loan_amount)
+  _balance -= total
+  _property += price
   set_repayments(SALARY)
 
 def single_house():
