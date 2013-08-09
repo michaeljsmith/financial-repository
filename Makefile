@@ -1,3 +1,3 @@
 plot:
-	python financial-projections.py
+	python financial_projections.py
 
