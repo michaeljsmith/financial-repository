@@ -42,9 +42,12 @@ def take_job(income):
   global _income
   _income = income
 
+def rent_home(rent):
+  global _rent
+  _rent = rent
+
 def wait(period):
   global _balance
-  global _income
   global _time
 
   for i in xrange(period):
@@ -55,6 +58,7 @@ def wait(period):
 
 def work_solidly():
   take_job(7000)
+  rent_home(2000)
   wait(duration * 12)
 
 def main():
