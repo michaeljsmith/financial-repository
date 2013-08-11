@@ -71,6 +71,14 @@ def clear():
 def report():
   _values.append(_balance + _property - _principal)
 
+def pay(amount):
+  global _balance
+  _balance -= amount
+
+def gain_property(amount):
+  global _property
+  _property += amount
+
 def take_job(income):
   global _income
   _income = income
@@ -113,13 +121,11 @@ def work_solidly():
   wait(DURATION * 12)
 
 def buy_home(price):
-  global _balance
-  global _property
   total = price + stamp_duty(price)
   loan_amount = max(0, total - _balance)
   take_loan(loan_amount)
-  _balance -= total
-  _property += price
+  pay(total)
+  gain_property(price)
   set_repayments(SALARY)
 
 def single_house(amount):
