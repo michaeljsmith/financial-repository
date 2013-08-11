@@ -1,17 +1,18 @@
+# TODO: Capital growth
 # TODO: Taxes
 # TODO: Expenses
-# TODO: Negative gearing
-# TODO: Other investment
-# TODO: Investment properties
-# TODO: Renovations
 # TODO: Private school
 # TODO: Rent
+# TODO: Negative gearing
+# TODO: Investment properties
+# TODO: Renovations
 
 from os import system
 
 DURATION = 25
 SALARY = 6000
 RATE = 0.07
+ALTERNATIVE_YIELD = 0.05
 
 stamp_duty_brackets = [
   (0, 0, 0.0125),
@@ -96,6 +97,7 @@ def wait(period):
     _time += 1
     _balance += _income
     _balance -= _rent
+    _balance += _balance * ALTERNATIVE_YIELD / 12
 
     capped_repayment = min(_principal, _repayment)
     _balance -= capped_repayment
