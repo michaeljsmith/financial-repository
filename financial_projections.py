@@ -1,18 +1,19 @@
-# TODO: Capital growth
-# TODO: Taxes
 # TODO: Expenses
 # TODO: Private school
-# TODO: Rent
+# TODO: Separate jobs
 # TODO: Negative gearing
 # TODO: Investment properties
 # TODO: Renovations
+# TODO: Medicare levy
 
 from os import system
 
 DURATION = 25
 SALARY = 6000
 RATE = 0.07
-ALTERNATIVE_YIELD = 0.05
+ALTERNATIVE_YIELD = 0.06 # TODO: Split into dividends + capital growth
+CAPITAL_GROWTH = 0.05
+RENTAL_YIELD = 0.042 # Calculated only from single estimate
 
 stamp_duty_brackets = [
   (0, 0, 0.0125),
@@ -27,6 +28,22 @@ def stamp_duty(price):
     if price > min:
       return base + (price - min) * pct
 
+income_tax_brackets = [
+  (0, 0.0),
+  (18200, 0.19),
+  (37000, 0.325),
+  (80000, 0.37),
+  (180000, 0.45)]
+
+def income_tax(income):
+  tax = 0
+  for min, pct in reversed(income_tax_brackets):
+    if income > min:
+      amount_at_pct = income - min
+      income = min
+      tax += amount_at_pct * pct
+  return tax
+
 class Record(object):
   def __init__(self, title, values):
     self.title = title
@@ -37,7 +54,6 @@ _balance = 0
 _income = 0
 _rent = 0
 _principal = 0
-_repayment = 0
 _property = 0
 
 _values = []
@@ -57,7 +73,6 @@ def clear():
   global _values
   global _rent
   global _principal
-  global _repayment
   global _property
 
   _time = 0
@@ -65,7 +80,6 @@ def clear():
   _income = 0
   _rent = 0
   _principal = 0
-  _repayment = 0
   _property = 0
   _values = []
 
@@ -84,25 +98,35 @@ def take_job(income):
   global _income
   _income = income
 
-def rent_home(rent):
+def rent_home(price):
   global _rent
-  _rent = rent
+  _rent = price * RENTAL_YIELD / 12
 
 def wait(period):
   global _balance
   global _time
   global _principal
+  global _property
 
   for i in xrange(period):
     _time += 1
-    _balance += _income
-    _balance -= _rent
-    _balance += _balance * ALTERNATIVE_YIELD / 12
 
-    capped_repayment = min(_principal, _repayment)
+    alternative_yield = _balance * ALTERNATIVE_YIELD / 12
+    total_income = _income + alternative_yield
+    tax_payable = income_tax(total_income * 12) / 12
+
+    disposable_income = total_income - tax_payable
+    _balance += disposable_income
+
+    _balance -= _rent
+
+    repayment = disposable_income
+    capped_repayment = min(_principal, repayment)
     _balance -= capped_repayment
     interest_due = _principal * RATE / 12
     _principal -= capped_repayment - interest_due
+
+    _property += _property * CAPITAL_GROWTH / 12
 
     report()
 
@@ -113,14 +137,12 @@ def take_loan(amount):
   _principal += amount
   _balance += amount
 
-def set_repayments(repayment):
-  global _repayment
-  _repayment = repayment
-
-def work_solidly():
-  take_job(SALARY)
-  rent_home(2000)
-  wait(DURATION * 12)
+def single_rented_house(value):
+  def program():
+    take_job(SALARY)
+    rent_home(value)
+    wait(DURATION * 12)
+  return program
 
 def buy_home(price):
   total = price + stamp_duty(price)
@@ -128,17 +150,16 @@ def buy_home(price):
   take_loan(loan_amount)
   pay(total)
   gain_property(price)
-  set_repayments(SALARY)
 
-def single_house(amount):
-  def single_house():
+def single_house(value):
+  def program():
     take_job(SALARY)
-    buy_home(amount)
+    buy_home(value)
     wait(DURATION * 12)
-  return single_house
+  return program
 
 def main():
-  run('work solidly', work_solidly)
+  run('rent house $750000', single_rented_house(750000))
   run('single house $750000', single_house(600000))
   run('single house $650000', single_house(500000))
 
