@@ -1,3 +1,12 @@
+# TODO: Taxes
+# TODO: Expenses
+# TODO: Negative gearing
+# TODO: Other investment
+# TODO: Investment properties
+# TODO: Renovations
+# TODO: Private school
+# TODO: Rent
+
 from os import system
 
 DURATION = 25
@@ -80,7 +89,7 @@ def wait(period):
     _balance += _income
     _balance -= _rent
 
-    capped_repayment = min(_balance, _repayment)
+    capped_repayment = min(_principal, _repayment)
     _balance -= capped_repayment
     interest_due = _principal * RATE / 12
     _principal -= capped_repayment - interest_due
@@ -113,14 +122,17 @@ def buy_home(price):
   _property += price
   set_repayments(SALARY)
 
-def single_house():
-  take_job(SALARY)
-  buy_home(700000)
-  wait(DURATION * 12)
+def single_house(amount):
+  def single_house():
+    take_job(SALARY)
+    buy_home(amount)
+    wait(DURATION * 12)
+  return single_house
 
 def main():
   run('work solidly', work_solidly)
-  run('single house', single_house)
+  run('single house $750000', single_house(600000))
+  run('single house $650000', single_house(500000))
 
   with open('data', 'w') as data_file:
     for t, values in enumerate(zip(*[r.values for r in _records])):
