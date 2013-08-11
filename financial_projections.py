@@ -90,9 +90,17 @@ def pay(amount):
   global _balance
   _balance -= amount
 
+def receive(amount):
+  global _balance
+  _balance += amount
+
 def gain_property(amount):
   global _property
   _property += amount
+
+def lose_property(amount):
+  global _property
+  _property -= amount
 
 def take_job(income):
   global _income
@@ -120,7 +128,7 @@ def wait(period):
 
     _balance -= _rent
 
-    repayment = disposable_income
+    repayment = _balance
     capped_repayment = min(_principal, repayment)
     _balance -= capped_repayment
     interest_due = _principal * RATE / 12
@@ -151,6 +159,11 @@ def buy_home(price):
   pay(total)
   gain_property(price)
 
+def sell_home():
+  value = _property
+  receive(value)
+  lose_property(value)
+
 def single_house(value):
   def program():
     take_job(SALARY)
@@ -158,10 +171,18 @@ def single_house(value):
     wait(DURATION * 12)
   return program
 
+def foo():
+  take_job(SALARY)
+  buy_home(600000)
+  wait(10 * 12)
+  sell_home
+  rent_home(750000)
+
 def main():
   run('rent house $750000', single_rented_house(750000))
   run('single house $750000', single_house(600000))
   run('single house $650000', single_house(500000))
+  run('foo', foo)
 
   with open('data', 'w') as data_file:
     for t, values in enumerate(zip(*[r.values for r in _records])):
