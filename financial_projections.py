@@ -1,4 +1,3 @@
-# TODO: Private school
 # TODO: Separate jobs
 # TODO: Negative gearing
 # TODO: Investment properties
@@ -18,10 +17,14 @@ RATE = 0.07
 ALTERNATIVE_YIELD = 0.06 # TODO: Split into dividends + capital growth
 CAPITAL_GROWTH = 0.04 # Growth - costs (maintenance, insurance)
 RENTAL_YIELD = 0.042 # Calculated only from single estimate
-INITIAL_MONTHLY_EXPENSES = 3000 # All costs other not house-related
+INITIAL_MONTHLY_EXPENSES = 3000 # All costs not house-related
 EXPENSE_INCREASE = INFLATION
 INITIAL_EXPENSE_PER_CHILD = 1000
 CHILD_CARE_DURATION = 20
+SCHOOL_FEE_START_AGE = 12
+SCHOOL_FEE_END_AGE = 18
+SCHOOL_FEE_INCREASE = INFLATION # Bit of an extrapolation
+PRIVATE_SCHOOL_FEES = 40000 # Bit of an extrapolation
 
 stamp_duty_brackets = [
   (0, 0, 0.0125),
@@ -90,6 +93,8 @@ def clear():
   global _rent
   global _principal
   global _property
+  global _children
+  global _school_fees
 
   _time = 0
   _balance = INITIAL_BALANCE
@@ -97,6 +102,8 @@ def clear():
   _rent = 0
   _principal = 0
   _property = 0
+  _school_fees = 0
+  _children = []
   _values = []
 
 def report():
@@ -132,6 +139,10 @@ def rent_home(price):
 def have_child():
   _children.append(Child(time()))
 
+def set_school_fees(amount):
+  global _school_fees
+  _school_fees = amount
+
 def wait(period):
   global _balance
   global _time
@@ -141,19 +152,24 @@ def wait(period):
 
   for i in xrange(period):
     _time += 1
-    total_inflation = ((1 + (EXPENSE_INCREASE / 12)) ** _time)
+    total_expense_inflation = (1 + (EXPENSE_INCREASE / 12)) ** _time
 
     alternative_yield = _balance * ALTERNATIVE_YIELD / 12
     total_income = _salary + alternative_yield
     _salary += _salary * SALARY_INCREASE / 12
     tax_payable = income_tax(total_income * 12) / 12
 
-    expense_per_child = INITIAL_EXPENSE_PER_CHILD * total_inflation
+    expense_per_child = INITIAL_EXPENSE_PER_CHILD * total_expense_inflation
     num_dependants = len([c for c in _children if c.age() < CHILD_CARE_DURATION * 12])
     dependant_expenses = num_dependants * expense_per_child
 
-    expenses = INITIAL_MONTHLY_EXPENSES * total_inflation
-    disposable_income = total_income - tax_payable - expenses - _rent - dependant_expenses
+    expenses = INITIAL_MONTHLY_EXPENSES * total_expense_inflation
+
+    children_at_school = len([c for c in _children if SCHOOL_FEE_START_AGE * 12 <= c.age() < SCHOOL_FEE_END_AGE * 12])
+    total_school_fee_inflation = (1 + (SCHOOL_FEE_INCREASE / 12)) ** _time
+    total_school_fees = children_at_school * _school_fees / 12 * total_school_fee_inflation
+
+    disposable_income = total_income - tax_payable - expenses - _rent - dependant_expenses - total_school_fees
     _balance += disposable_income
 
     repayment = _balance
@@ -165,6 +181,9 @@ def wait(period):
     _property += _property * CAPITAL_GROWTH / 12
 
     report()
+
+def select_private_school():
+  set_school_fees(PRIVATE_SCHOOL_FEES)
 
 def take_loan(amount):
   global _principal
@@ -200,13 +219,16 @@ def single_house(value):
   return program
 
 def foo():
+  select_private_school()
   take_job(SALARY)
   buy_home(750000)
-  wait(10 * 12)
+  wait(5 * 12)
   sell_home()
-  have_child()
   rent_home(750000)
-  wait(15 * 12)
+  have_child()
+  wait(2 * 12)
+  have_child()
+  wait(18 * 12)
 
 def main():
   run('rent house $750000', single_rented_house(750000))
