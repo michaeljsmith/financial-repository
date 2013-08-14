@@ -16,7 +16,8 @@ SALARY1 = 7000
 SALARY_INCREASE = INFLATION
 RATE = 0.07
 ALTERNATIVE_YIELD = 0.06 # TODO: Split into dividends + capital growth
-CAPITAL_GROWTH = 0.04 # Growth - costs (maintenance, insurance)
+CAPITAL_GROWTH = 0.06 # Growth - costs (maintenance, insurance)
+MAINTENANCE_FACTOR = 0.02 # Growth - costs (maintenance, insurance)
 RENTAL_YIELD = 0.042 # Calculated only from single estimate
 INITIAL_MONTHLY_EXPENSES = 3000 # All costs not house-related
 EXPENSE_INCREASE = INFLATION
@@ -83,6 +84,7 @@ _rent = 0
 _principal = 0
 _property = 0
 _investment_property = 0
+_investment_principal = 0
 _desired_children = 0
 _cgt_owing = 0
 _children = []
@@ -110,6 +112,7 @@ def clear():
   global _principal
   global _property
   global _investment_property
+  global _investment_principal
   global _children
   global _school_fees
   global _salary
@@ -123,6 +126,7 @@ def clear():
   _principal = 0
   _property = 0
   _investment_property = 0
+  _investment_principal = 0
   _school_fees = 0
   _desired_children = 0
   _children = []
@@ -130,7 +134,7 @@ def clear():
   _values = []
 
 def report():
-  _values.append(_balance + _property + _investment_property - _principal - _cgt_owing)
+  _values.append(_balance + _property + _investment_property - _principal - _investment_principal - _cgt_owing)
 
 def time():
   return _time
@@ -180,6 +184,7 @@ def wait(period):
   global _principal
   global _property
   global _investment_property
+  global _investment_principal
   global _salary
   global _cgt_owing
 
@@ -237,8 +242,8 @@ def wait(period):
     if capped_repayment > 0 and _principal == 0:
       print 'paid off', _time
 
-    _property += _property * CAPITAL_GROWTH / 12
-    investment_property_increase = _investment_property * CAPITAL_GROWTH / 12
+    _property += _property * (CAPITAL_GROWTH - MAINTENANCE_FACTOR) / 12
+    investment_property_increase = _investment_property * (CAPITAL_GROWTH - MAINTENANCE_FACTOR) / 12
     _cgt_owing += income_tax_brackets[-1][1] * investment_property_increase # Assume cgt will eventually be levied at highest bracket.
     _investment_property += investment_property_increase
 
