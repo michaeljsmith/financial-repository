@@ -35,6 +35,15 @@ HOME_CARE_SALARY_FACTOR = 0.5
 FIRST_CHILD_DELAY = 5
 SUBSEQUENT_CHILD_DELAY = 2
 
+def bracket_total(amount, brackets):
+  due = 0
+  for min, pct in reversed(brackets):
+    if amount > min:
+      amount_at_pct = amount - min
+      amount = min
+      due += amount_at_pct * pct
+  return due
+
 stamp_duty_brackets = [
   (0, 0.0125),
   (14000, 0.015),
@@ -44,13 +53,7 @@ stamp_duty_brackets = [
   (1000000, 0.055)]
 
 def stamp_duty(price):
-  duty = 0
-  for min, pct in reversed(stamp_duty_brackets):
-    if price > min:
-      amount_at_pct = price - min
-      price = min
-      duty += amount_at_pct * pct
-  return duty
+  return bracket_total(price, stamp_duty_brackets)
 
 income_tax_brackets = [
   (0, 0.0),
@@ -60,13 +63,7 @@ income_tax_brackets = [
   (180000, 0.45)]
 
 def income_tax(income):
-  tax = 0
-  for min, pct in reversed(income_tax_brackets):
-    if income > min:
-      amount_at_pct = income - min
-      income = min
-      tax += amount_at_pct * pct
-  return tax
+  return bracket_total(income, income_tax_brackets)
 
 class Record(object):
   def __init__(self, title, values):
