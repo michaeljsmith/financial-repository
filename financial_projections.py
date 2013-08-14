@@ -1,19 +1,20 @@
-# TODO: Initial status
 # TODO: Expenses
 # TODO: Private school
 # TODO: Separate jobs
 # TODO: Negative gearing
 # TODO: Investment properties
+# TODO: Initial investment property
 # TODO: Renovations
 # TODO: Medicare levy
 
 from os import system
 
+INITIAL_BALANCE = 150000
 DURATION = 25
 SALARY = 6000
 RATE = 0.07
 ALTERNATIVE_YIELD = 0.06 # TODO: Split into dividends + capital growth
-CAPITAL_GROWTH = 0.05
+CAPITAL_GROWTH = 0.04 # Growth - costs (maintenance, insurance)
 RENTAL_YIELD = 0.042 # Calculated only from single estimate
 
 stamp_duty_brackets = [
@@ -77,7 +78,7 @@ def clear():
   global _property
 
   _time = 0
-  _balance = 0
+  _balance = INITIAL_BALANCE
   _income = 0
   _rent = 0
   _principal = 0
@@ -174,7 +175,7 @@ def single_house(value):
 
 def foo():
   take_job(SALARY)
-  buy_home(600000)
+  buy_home(750000)
   wait(10 * 12)
   sell_home()
   rent_home(750000)
@@ -182,8 +183,8 @@ def foo():
 
 def main():
   run('rent house $750000', single_rented_house(750000))
-  run('single house $750000', single_house(600000))
-  run('single house $650000', single_house(500000))
+  run('single house $750000', single_house(750000))
+  run('single house $650000', single_house(650000))
   run('foo', foo)
 
   with open('data', 'w') as data_file:
