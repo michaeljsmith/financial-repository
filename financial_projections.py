@@ -1,4 +1,3 @@
-# TODO: Stop working after kids
 # TODO: Negative gearing
 # TODO: Investment properties
 # TODO: Initial investment property
@@ -26,6 +25,11 @@ SCHOOL_FEE_START_AGE = 12
 SCHOOL_FEE_END_AGE = 18
 SCHOOL_FEE_INCREASE = INFLATION
 PRIVATE_SCHOOL_FEES = 30000
+
+MATERNITY_PERIOD = 0.5
+MATERNITY_SALARY_FACTOR = 0
+HOME_CARE_PERIOD = 10
+HOME_CARE_SALARY_FACTOR = 0.5
 
 FIRST_CHILD_DELAY = 5
 SUBSEQUENT_CHILD_DELAY = 2
@@ -86,6 +90,10 @@ _records = []
 
 def run(title, program):
   clear()
+
+  take_job(0, SALARY0)
+  take_job(1, SALARY1)
+
   program()
   wait(DURATION * 12 - _time)
 
@@ -176,7 +184,18 @@ def wait(period):
 
     alternative_yield = _balance * ALTERNATIVE_YIELD / 12
 
-    income = [s + alternative_yield / len(_salary) for s in _salary]
+    income_factor = [1.0, 1.0]
+    if len(_children):
+      time_since_last_child = _children[-1].age()
+      factor = 1.0
+      if time_since_last_child <= MATERNITY_PERIOD * 12:
+        factor = MATERNITY_SALARY_FACTOR
+      elif time_since_last_child <= HOME_CARE_PERIOD * 12:
+        factor = HOME_CARE_SALARY_FACTOR
+
+      income_factor[1] = factor
+
+    income = [s * f + alternative_yield / len(_salary) for s, f in zip(_salary, income_factor)]
     total_income = sum(income)
     _salary = [s * (1 + (SALARY_INCREASE / 12)) for s in _salary]
     tax_payable = sum(income_tax(i * 12) / 12 for i in income)
@@ -216,8 +235,6 @@ def take_loan(amount):
 
 def single_rented_house(value):
   def program():
-    take_job(0, SALARY1)
-    take_job(1, SALARY1)
     rent_home(value)
   return program
 
@@ -235,16 +252,12 @@ def sell_home():
 
 def single_house(value):
   def program():
-    take_job(0, SALARY0)
-    take_job(1, SALARY1)
     buy_home(value)
   return program
 
 def foo():
   set_desired_children(2)
   select_private_school()
-  take_job(0, SALARY0)
-  take_job(1, SALARY1)
   buy_home(750000)
   wait(5 * 12)
   sell_home()
