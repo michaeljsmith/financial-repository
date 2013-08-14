@@ -234,13 +234,19 @@ def wait(period):
     disposable_income = total_income - tax_payable - expenses - _rent - dependant_expenses - total_school_fees
     _balance += disposable_income
 
+    # TODO: reorganize all loans into a single list.
+    # TODO: make minimum repayments for all loans.
+    repayment = _balance
+    capped_repayment = min(_investment_principal, repayment)
+    _balance -= capped_repayment
+    interest_due = _investment_principal * RATE / 12
+    _investment_principal -= capped_repayment - interest_due
+
     repayment = _balance
     capped_repayment = min(_principal, repayment)
     _balance -= capped_repayment
     interest_due = _principal * RATE / 12
     _principal -= capped_repayment - interest_due
-    if capped_repayment > 0 and _principal == 0:
-      print 'paid off', _time
 
     _property += _property * (CAPITAL_GROWTH - MAINTENANCE_FACTOR) / 12
     investment_property_increase = _investment_property * (CAPITAL_GROWTH - MAINTENANCE_FACTOR) / 12
