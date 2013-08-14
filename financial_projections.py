@@ -11,11 +11,15 @@ from os import system
 
 INITIAL_BALANCE = 150000
 DURATION = 25
-SALARY = 6000
+INFLATION = 0.03
+SALARY = 10000
+SALARY_INCREASE = INFLATION
 RATE = 0.07
 ALTERNATIVE_YIELD = 0.06 # TODO: Split into dividends + capital growth
 CAPITAL_GROWTH = 0.04 # Growth - costs (maintenance, insurance)
 RENTAL_YIELD = 0.042 # Calculated only from single estimate
+INITIAL_MONTHLY_EXPENSES = 3000 # All costs other not house-related
+EXPENSE_INCREASE = INFLATION
 
 stamp_duty_brackets = [
   (0, 0, 0.0125),
@@ -53,7 +57,7 @@ class Record(object):
 
 _time = 0
 _balance = 0
-_income = 0
+_salary = 0
 _rent = 0
 _principal = 0
 _property = 0
@@ -71,7 +75,7 @@ def run(title, program):
 def clear():
   global _time
   global _balance
-  global _income
+  global _salary
   global _values
   global _rent
   global _principal
@@ -79,7 +83,7 @@ def clear():
 
   _time = 0
   _balance = INITIAL_BALANCE
-  _income = 0
+  _salary = 0
   _rent = 0
   _principal = 0
   _property = 0
@@ -105,8 +109,8 @@ def lose_property(amount):
   _property -= amount
 
 def take_job(income):
-  global _income
-  _income = income
+  global _salary
+  _salary = income
 
 def rent_home(price):
   global _rent
@@ -117,18 +121,19 @@ def wait(period):
   global _time
   global _principal
   global _property
+  global _salary
 
   for i in xrange(period):
     _time += 1
 
     alternative_yield = _balance * ALTERNATIVE_YIELD / 12
-    total_income = _income + alternative_yield
+    total_income = _salary + alternative_yield
+    _salary += _salary * SALARY_INCREASE / 12
     tax_payable = income_tax(total_income * 12) / 12
 
-    disposable_income = total_income - tax_payable
+    expenses = INITIAL_MONTHLY_EXPENSES * ((1 + (EXPENSE_INCREASE / 12)) ** _time)
+    disposable_income = total_income - tax_payable - expenses - _rent
     _balance += disposable_income
-
-    _balance -= _rent
 
     repayment = _balance
     capped_repayment = min(_principal, repayment)
