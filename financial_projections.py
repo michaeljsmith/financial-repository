@@ -175,8 +175,9 @@ def foo():
   take_job(SALARY)
   buy_home(600000)
   wait(10 * 12)
-  sell_home
+  sell_home()
   rent_home(750000)
+  wait(15 * 12)
 
 def main():
   run('rent house $750000', single_rented_house(750000))
