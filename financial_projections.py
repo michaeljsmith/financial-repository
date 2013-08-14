@@ -1,3 +1,4 @@
+# TODO: Auto kid schedule
 # TODO: Separate jobs
 # TODO: Negative gearing
 # TODO: Investment properties
@@ -24,7 +25,7 @@ CHILD_CARE_DURATION = 20
 SCHOOL_FEE_START_AGE = 12
 SCHOOL_FEE_END_AGE = 18
 SCHOOL_FEE_INCREASE = INFLATION # Bit of an extrapolation
-PRIVATE_SCHOOL_FEES = 40000 # Bit of an extrapolation
+PRIVATE_SCHOOL_FEES = 30000 # Bit of an extrapolation
 
 stamp_duty_brackets = [
   (0, 0, 0.0125),
