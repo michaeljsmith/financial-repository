@@ -1,4 +1,3 @@
-# TODO: Negative gearing
 # TODO: Increase in rent
 # TODO: Multiple investment properties
 # TODO: Initial investment property
@@ -215,11 +214,13 @@ def wait(period):
 
     rental_income = _investment_property * RENTAL_YIELD / 12
     investment_income = alternative_yield + rental_income
+    investment_interest_due = _investment_principal * RATE / 12
 
     income = [s * f + investment_income / len(_salary) for s, f in zip(_salary, income_factor)]
     total_income = sum(income)
+    deductions = max(0, investment_interest_due - rental_income)
     _salary = [s * (1 + (SALARY_INCREASE / 12)) for s in _salary]
-    tax_payable = sum(income_tax(i * 12) / 12 for i in income)
+    tax_payable = sum(income_tax(max(0, i - deductions) * 12) / 12 for i in income)
 
     total_expense_inflation = (1 + (EXPENSE_INCREASE / 12)) ** _time
     expense_per_child = INITIAL_EXPENSE_PER_CHILD * total_expense_inflation
@@ -237,16 +238,16 @@ def wait(period):
     # TODO: reorganize all loans into a single list.
     # TODO: make minimum repayments for all loans.
     repayment = _balance
-    capped_repayment = min(_investment_principal, repayment)
-    _balance -= capped_repayment
-    interest_due = _investment_principal * RATE / 12
-    _investment_principal -= capped_repayment - interest_due
-
-    repayment = _balance
     capped_repayment = min(_principal, repayment)
     _balance -= capped_repayment
     interest_due = _principal * RATE / 12
     _principal -= capped_repayment - interest_due
+
+    repayment = _balance
+    capped_repayment = min(_investment_principal, repayment)
+    _balance -= capped_repayment
+    interest_due = _investment_principal * RATE / 12
+    _investment_principal -= capped_repayment - interest_due
 
     _property += _property * (CAPITAL_GROWTH - MAINTENANCE_FACTOR) / 12
     investment_property_increase = _investment_property * (CAPITAL_GROWTH - MAINTENANCE_FACTOR) / 12
@@ -273,9 +274,13 @@ def buy_home(price):
   gain_property(price)
 
 def buy_investment_property(price):
+  global _investment_principal
+  global _balance
+
   total = price + stamp_duty(price)
   loan_amount = max(0, total - _balance)
-  take_loan(loan_amount)
+  _investment_principal += loan_amount
+  _balance += loan_amount
   pay(total)
   gain_investment_property(price)
 
@@ -297,12 +302,12 @@ def single_house(value):
 def foo():
   #set_desired_children(2)
   select_private_school()
-  rent_home(750000)
+  rent_home(1750000)
   buy_investment_property(750000)
 
 def main():
   #run('rent house $750000', single_rented_house(750000))
-  run('single house $750000', single_house(750000))
+  run('single house $750000', single_house(1750000))
   #run('single house $650000', single_house(650000))
   run('foo', foo)
 
