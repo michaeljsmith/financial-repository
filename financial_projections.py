@@ -1,4 +1,3 @@
-# TODO: Expenses
 # TODO: Private school
 # TODO: Separate jobs
 # TODO: Negative gearing
@@ -6,6 +5,7 @@
 # TODO: Initial investment property
 # TODO: Renovations
 # TODO: Medicare levy
+# TODO: Index tax brackets
 
 from os import system
 
@@ -20,6 +20,8 @@ CAPITAL_GROWTH = 0.04 # Growth - costs (maintenance, insurance)
 RENTAL_YIELD = 0.042 # Calculated only from single estimate
 INITIAL_MONTHLY_EXPENSES = 3000 # All costs other not house-related
 EXPENSE_INCREASE = INFLATION
+INITIAL_EXPENSE_PER_CHILD = 1000
+CHILD_CARE_DURATION = 20
 
 stamp_duty_brackets = [
   (0, 0, 0.0125),
@@ -55,12 +57,20 @@ class Record(object):
     self.title = title
     self.values = values
 
+class Child(object):
+  def __init__(self, birth):
+    self.birth = birth
+
+  def age(self):
+    return time() - self.birth
+
 _time = 0
 _balance = 0
 _salary = 0
 _rent = 0
 _principal = 0
 _property = 0
+_children = []
 
 _values = []
 
@@ -92,6 +102,9 @@ def clear():
 def report():
   _values.append(_balance + _property - _principal)
 
+def time():
+  return _time
+
 def pay(amount):
   global _balance
   _balance -= amount
@@ -116,6 +129,9 @@ def rent_home(price):
   global _rent
   _rent = price * RENTAL_YIELD / 12
 
+def have_child():
+  _children.append(Child(time()))
+
 def wait(period):
   global _balance
   global _time
@@ -125,14 +141,19 @@ def wait(period):
 
   for i in xrange(period):
     _time += 1
+    total_inflation = ((1 + (EXPENSE_INCREASE / 12)) ** _time)
 
     alternative_yield = _balance * ALTERNATIVE_YIELD / 12
     total_income = _salary + alternative_yield
     _salary += _salary * SALARY_INCREASE / 12
     tax_payable = income_tax(total_income * 12) / 12
 
-    expenses = INITIAL_MONTHLY_EXPENSES * ((1 + (EXPENSE_INCREASE / 12)) ** _time)
-    disposable_income = total_income - tax_payable - expenses - _rent
+    expense_per_child = INITIAL_EXPENSE_PER_CHILD * total_inflation
+    num_dependants = len([c for c in _children if c.age() < CHILD_CARE_DURATION * 12])
+    dependant_expenses = num_dependants * expense_per_child
+
+    expenses = INITIAL_MONTHLY_EXPENSES * total_inflation
+    disposable_income = total_income - tax_payable - expenses - _rent - dependant_expenses
     _balance += disposable_income
 
     repayment = _balance
@@ -183,6 +204,7 @@ def foo():
   buy_home(750000)
   wait(10 * 12)
   sell_home()
+  have_child()
   rent_home(750000)
   wait(15 * 12)
 
