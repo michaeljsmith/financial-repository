@@ -1,4 +1,3 @@
-# TODO: Auto kid schedule
 # TODO: Separate jobs
 # TODO: Negative gearing
 # TODO: Investment properties
@@ -26,6 +25,9 @@ SCHOOL_FEE_START_AGE = 12
 SCHOOL_FEE_END_AGE = 18
 SCHOOL_FEE_INCREASE = INFLATION # Bit of an extrapolation
 PRIVATE_SCHOOL_FEES = 30000 # Bit of an extrapolation
+
+FIRST_CHILD_DELAY = 5
+SUBSEQUENT_CHILD_DELAY = 2
 
 stamp_duty_brackets = [
   (0, 0, 0.0125),
@@ -74,6 +76,7 @@ _salary = 0
 _rent = 0
 _principal = 0
 _property = 0
+_desired_children = 0
 _children = []
 
 _values = []
@@ -83,6 +86,7 @@ _records = []
 def run(title, program):
   clear()
   program()
+  wait(DURATION * 12 - _time)
 
   _records.append(Record(title, _values))
 
@@ -96,6 +100,7 @@ def clear():
   global _property
   global _children
   global _school_fees
+  global _desired_children
 
   _time = 0
   _balance = INITIAL_BALANCE
@@ -104,6 +109,7 @@ def clear():
   _principal = 0
   _property = 0
   _school_fees = 0
+  _desired_children = 0
   _children = []
   _values = []
 
@@ -140,6 +146,10 @@ def rent_home(price):
 def have_child():
   _children.append(Child(time()))
 
+def set_desired_children(count):
+  global _desired_children
+  _desired_children = count
+
 def set_school_fees(amount):
   global _school_fees
   _school_fees = amount
@@ -153,17 +163,25 @@ def wait(period):
 
   for i in xrange(period):
     _time += 1
-    total_expense_inflation = (1 + (EXPENSE_INCREASE / 12)) ** _time
+
+    if len(_children) < _desired_children:
+      if len(_children):
+        time_since_last_child = _children[-1].age()
+        if time_since_last_child >= SUBSEQUENT_CHILD_DELAY * 12:
+          have_child()
+      else:
+        if _time >= FIRST_CHILD_DELAY * 12:
+          have_child()
 
     alternative_yield = _balance * ALTERNATIVE_YIELD / 12
     total_income = _salary + alternative_yield
     _salary += _salary * SALARY_INCREASE / 12
     tax_payable = income_tax(total_income * 12) / 12
 
+    total_expense_inflation = (1 + (EXPENSE_INCREASE / 12)) ** _time
     expense_per_child = INITIAL_EXPENSE_PER_CHILD * total_expense_inflation
     num_dependants = len([c for c in _children if c.age() < CHILD_CARE_DURATION * 12])
     dependant_expenses = num_dependants * expense_per_child
-
     expenses = INITIAL_MONTHLY_EXPENSES * total_expense_inflation
 
     children_at_school = len([c for c in _children if SCHOOL_FEE_START_AGE * 12 <= c.age() < SCHOOL_FEE_END_AGE * 12])
@@ -197,7 +215,6 @@ def single_rented_house(value):
   def program():
     take_job(SALARY)
     rent_home(value)
-    wait(DURATION * 12)
   return program
 
 def buy_home(price):
@@ -216,20 +233,16 @@ def single_house(value):
   def program():
     take_job(SALARY)
     buy_home(value)
-    wait(DURATION * 12)
   return program
 
 def foo():
+  set_desired_children(2)
   select_private_school()
   take_job(SALARY)
   buy_home(750000)
   wait(5 * 12)
   sell_home()
   rent_home(750000)
-  have_child()
-  wait(2 * 12)
-  have_child()
-  wait(18 * 12)
 
 def main():
   run('rent house $750000', single_rented_house(750000))
