@@ -1,5 +1,6 @@
 # TODO: Negative gearing
-# TODO: Investment properties
+# TODO: Increase in rent
+# TODO: Multiple investment properties
 # TODO: Initial investment property
 # TODO: Renovations
 # TODO: Medicare levy
@@ -81,7 +82,9 @@ _salary = [0, 0]
 _rent = 0
 _principal = 0
 _property = 0
+_investment_property = 0
 _desired_children = 0
+_cgt_owing = 0
 _children = []
 
 _values = []
@@ -106,10 +109,12 @@ def clear():
   global _rent
   global _principal
   global _property
+  global _investment_property
   global _children
   global _school_fees
   global _salary
   global _desired_children
+  global _cgt_owing
 
   _time = 0
   _balance = INITIAL_BALANCE
@@ -117,13 +122,15 @@ def clear():
   _rent = 0
   _principal = 0
   _property = 0
+  _investment_property = 0
   _school_fees = 0
   _desired_children = 0
   _children = []
+  _cgt_owing = 0
   _values = []
 
 def report():
-  _values.append(_balance + _property - _principal)
+  _values.append(_balance + _property + _investment_property - _principal - _cgt_owing)
 
 def time():
   return _time
@@ -139,6 +146,10 @@ def receive(amount):
 def gain_property(amount):
   global _property
   _property += amount
+
+def gain_investment_property(amount):
+  global _investment_property
+  _investment_property += amount
 
 def lose_property(amount):
   global _property
@@ -168,7 +179,9 @@ def wait(period):
   global _time
   global _principal
   global _property
+  global _investment_property
   global _salary
+  global _cgt_owing
 
   for i in xrange(period):
     _time += 1
@@ -195,7 +208,10 @@ def wait(period):
 
       income_factor[1] = factor
 
-    income = [s * f + alternative_yield / len(_salary) for s, f in zip(_salary, income_factor)]
+    rental_income = _investment_property * RENTAL_YIELD / 12
+    investment_income = alternative_yield + rental_income
+
+    income = [s * f + investment_income / len(_salary) for s, f in zip(_salary, income_factor)]
     total_income = sum(income)
     _salary = [s * (1 + (SALARY_INCREASE / 12)) for s in _salary]
     tax_payable = sum(income_tax(i * 12) / 12 for i in income)
@@ -218,8 +234,13 @@ def wait(period):
     _balance -= capped_repayment
     interest_due = _principal * RATE / 12
     _principal -= capped_repayment - interest_due
+    if capped_repayment > 0 and _principal == 0:
+      print 'paid off', _time
 
     _property += _property * CAPITAL_GROWTH / 12
+    investment_property_increase = _investment_property * CAPITAL_GROWTH / 12
+    _cgt_owing += income_tax_brackets[-1][1] * investment_property_increase # Assume cgt will eventually be levied at highest bracket.
+    _investment_property += investment_property_increase
 
     report()
 
@@ -233,11 +254,6 @@ def take_loan(amount):
   _principal += amount
   _balance += amount
 
-def single_rented_house(value):
-  def program():
-    rent_home(value)
-  return program
-
 def buy_home(price):
   total = price + stamp_duty(price)
   loan_amount = max(0, total - _balance)
@@ -245,10 +261,22 @@ def buy_home(price):
   pay(total)
   gain_property(price)
 
+def buy_investment_property(price):
+  total = price + stamp_duty(price)
+  loan_amount = max(0, total - _balance)
+  take_loan(loan_amount)
+  pay(total)
+  gain_investment_property(price)
+
 def sell_home():
   value = _property
   receive(value)
   lose_property(value)
+
+def single_rented_house(value):
+  def program():
+    rent_home(value)
+  return program
 
 def single_house(value):
   def program():
@@ -256,17 +284,15 @@ def single_house(value):
   return program
 
 def foo():
-  set_desired_children(2)
+  #set_desired_children(2)
   select_private_school()
-  buy_home(750000)
-  wait(5 * 12)
-  sell_home()
   rent_home(750000)
+  buy_investment_property(750000)
 
 def main():
-  run('rent house $750000', single_rented_house(750000))
+  #run('rent house $750000', single_rented_house(750000))
   run('single house $750000', single_house(750000))
-  run('single house $650000', single_house(650000))
+  #run('single house $650000', single_house(650000))
   run('foo', foo)
 
   with open('data', 'w') as data_file:
