@@ -1,3 +1,4 @@
+# TODO: Initial status
 # TODO: Expenses
 # TODO: Private school
 # TODO: Separate jobs
