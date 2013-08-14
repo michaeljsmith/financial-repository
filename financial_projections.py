@@ -2,8 +2,8 @@
 # TODO: Multiple investment properties
 # TODO: Initial investment property
 # TODO: Renovations
-# TODO: Medicare levy
 # TODO: Index tax brackets
+# TODO: Land value increase v house value
 
 from os import system
 
@@ -36,17 +36,21 @@ FIRST_CHILD_DELAY = 5
 SUBSEQUENT_CHILD_DELAY = 2
 
 stamp_duty_brackets = [
-  (0, 0, 0.0125),
-  (14000, 175, 0.015),
-  (30000, 415, 0.0175),
-  (80000, 1290, 0.035),
-  (300000, 8990, 0.045),
-  (1000000, 40490, 0.055)]
+  (0, 0.0125),
+  (14000, 0.015),
+  (30000, 0.0175),
+  (80000, 0.035),
+  (300000, 0.045),
+  (1000000, 0.055)]
 
 def stamp_duty(price):
-  for min, base, pct in reversed(stamp_duty_brackets):
+  duty = 0
+  for min, pct in reversed(stamp_duty_brackets):
     if price > min:
-      return base + (price - min) * pct
+      amount_at_pct = price - min
+      price = min
+      duty += amount_at_pct * pct
+  return duty
 
 income_tax_brackets = [
   (0, 0.0),
