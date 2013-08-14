@@ -1,4 +1,4 @@
-# TODO: Separate jobs
+# TODO: Stop working after kids
 # TODO: Negative gearing
 # TODO: Investment properties
 # TODO: Initial investment property
@@ -11,7 +11,8 @@ from os import system
 INITIAL_BALANCE = 150000
 DURATION = 25
 INFLATION = 0.03
-SALARY = 10000
+SALARY0 = 8000
+SALARY1 = 7000
 SALARY_INCREASE = INFLATION
 RATE = 0.07
 ALTERNATIVE_YIELD = 0.06 # TODO: Split into dividends + capital growth
@@ -23,8 +24,8 @@ INITIAL_EXPENSE_PER_CHILD = 1000
 CHILD_CARE_DURATION = 20
 SCHOOL_FEE_START_AGE = 12
 SCHOOL_FEE_END_AGE = 18
-SCHOOL_FEE_INCREASE = INFLATION # Bit of an extrapolation
-PRIVATE_SCHOOL_FEES = 30000 # Bit of an extrapolation
+SCHOOL_FEE_INCREASE = INFLATION
+PRIVATE_SCHOOL_FEES = 30000
 
 FIRST_CHILD_DELAY = 5
 SUBSEQUENT_CHILD_DELAY = 2
@@ -72,7 +73,7 @@ class Child(object):
 
 _time = 0
 _balance = 0
-_salary = 0
+_salary = [0, 0]
 _rent = 0
 _principal = 0
 _property = 0
@@ -93,18 +94,18 @@ def run(title, program):
 def clear():
   global _time
   global _balance
-  global _salary
   global _values
   global _rent
   global _principal
   global _property
   global _children
   global _school_fees
+  global _salary
   global _desired_children
 
   _time = 0
   _balance = INITIAL_BALANCE
-  _salary = 0
+  _salary = [0, 0]
   _rent = 0
   _principal = 0
   _property = 0
@@ -135,9 +136,9 @@ def lose_property(amount):
   global _property
   _property -= amount
 
-def take_job(income):
+def take_job(person, income):
   global _salary
-  _salary = income
+  _salary[person] = income
 
 def rent_home(price):
   global _rent
@@ -174,9 +175,11 @@ def wait(period):
           have_child()
 
     alternative_yield = _balance * ALTERNATIVE_YIELD / 12
-    total_income = _salary + alternative_yield
-    _salary += _salary * SALARY_INCREASE / 12
-    tax_payable = income_tax(total_income * 12) / 12
+
+    income = [s + alternative_yield / len(_salary) for s in _salary]
+    total_income = sum(income)
+    _salary = [s * (1 + (SALARY_INCREASE / 12)) for s in _salary]
+    tax_payable = sum(income_tax(i * 12) / 12 for i in income)
 
     total_expense_inflation = (1 + (EXPENSE_INCREASE / 12)) ** _time
     expense_per_child = INITIAL_EXPENSE_PER_CHILD * total_expense_inflation
@@ -213,7 +216,8 @@ def take_loan(amount):
 
 def single_rented_house(value):
   def program():
-    take_job(SALARY)
+    take_job(0, SALARY1)
+    take_job(1, SALARY1)
     rent_home(value)
   return program
 
@@ -231,14 +235,16 @@ def sell_home():
 
 def single_house(value):
   def program():
-    take_job(SALARY)
+    take_job(0, SALARY0)
+    take_job(1, SALARY1)
     buy_home(value)
   return program
 
 def foo():
   set_desired_children(2)
   select_private_school()
-  take_job(SALARY)
+  take_job(0, SALARY0)
+  take_job(1, SALARY1)
   buy_home(750000)
   wait(5 * 12)
   sell_home()
