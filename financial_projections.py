@@ -194,8 +194,7 @@ def clear():
 def report():
   property = sum(p.value for p in _properties)
   principal = sum(p.principal for p in _properties)
-  #_values.append(_balance + property - principal - _cgt_owing)
-  _values.append(_balance)
+  _values.append(_balance + property - principal - _cgt_owing)
 
 def time():
   return _time
@@ -268,7 +267,6 @@ def wait(period):
     for p in _properties:
       rental_income = p.value * p.rent() * RENTAL_YIELD / 12
       p.total_rent += rental_income
-      # TODO: Subtract maintenance/interest
       investment_income += rental_income
 
       offset_portion = min(invested_money, p.principal)
@@ -280,11 +278,11 @@ def wait(period):
       deductions += negative_gearing_deduction
 
       repayment = min(p.principal, p.minimum_repayment)
-      _balance -= repayment
+      investment_income -= repayment
 
       maintenance = p.value * MAINTENANCE_FACTOR / 12
       p.total_maintenance += maintenance
-      _balance -= maintenance
+      investment_income -= maintenance
       p.total_interest_paid += interest_due
       p.principal -= repayment - interest_due
 
