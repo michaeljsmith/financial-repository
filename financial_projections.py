@@ -1,6 +1,7 @@
+# TODO: Minimum repayments
+# TODO: Increase in rent
 # TODO: More accurate maintenance costs
 # TODO: Startup
-# TODO: Increase in rent
 # TODO: Renovations
 # TODO: Index tax brackets
 # TODO: Land value increase v house value
@@ -37,7 +38,7 @@ MATERNITY_SALARY_FACTOR = 0
 HOME_CARE_PERIOD = 10
 HOME_CARE_SALARY_FACTOR = 0.5
 
-FIRST_CHILD_DELAY = 5
+FIRST_CHILD_DELAY = 3
 SUBSEQUENT_CHILD_DELAY = 2
 
 def bracket_total(amount, brackets):
@@ -149,6 +150,8 @@ def run(title, program):
 
   for i, p in enumerate(_properties):
     print '  property %d:' % (i,)
+    print '    value: %d: ' % (p.value,)
+    print '    principal %d: ' % (p.principal,)
     print '    total capital gain: %d' % (p.total_increase,)
     print '    total rent earned: %d' % (p.total_rent,)
     print '    total cgt payable: %d' % (p.total_cgt,)
@@ -372,19 +375,19 @@ def compare_initial_property():
     register_initial_property()
     set_desired_children(2)
     select_private_school()
-    buy_property(Property.OCCUPY, 750000)
+    buy_property(Property.OCCUPY, 650000)
 
   def sell():
     register_initial_property()
     sell_property(0)
     set_desired_children(2)
     select_private_school()
-    buy_property(Property.OCCUPY, 750000)
+    buy_property(Property.OCCUPY, 650000)
 
   def without_property():
     set_desired_children(2)
     select_private_school()
-    buy_property(Property.OCCUPY, 750000)
+    buy_property(Property.OCCUPY, 650000)
 
   plot_runs([
     ('sell initial_property', sell),
