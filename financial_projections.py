@@ -18,7 +18,7 @@ SALARY_INCREASE = INFLATION
 RATE = 0.07
 ALTERNATIVE_YIELD = 0.06 # TODO: Split into dividends + capital growth
 CAPITAL_GROWTH = 0.06
-MAINTENANCE_FACTOR = 0.01 # TODO: More accurate measure
+MAINTENANCE_FACTOR = 0.02 # TODO: More accurate measure
 RENTAL_YIELD = 0.042 # Calculated only from single estimate
 INITIAL_MONTHLY_EXPENSES = 3000 # All costs not house-related
 EXPENSE_INCREASE = INFLATION
@@ -30,7 +30,7 @@ SCHOOL_FEE_INCREASE = INFLATION
 PRIVATE_SCHOOL_FEES = 30000
 
 INITIAL_PROPERTY_VALUE = 200000
-INITIAL_PROPERTY_PRINCIPAL = 80000
+INITIAL_PROPERTY_PRINCIPAL = 120000
 
 MATERNITY_PERIOD = 0.5
 MATERNITY_SALARY_FACTOR = 0
@@ -134,10 +134,10 @@ def run(title, program):
 
   print
   print title
-  print 'balance', _balance
-  print 'property value: ', sum(p.value for p in _properties)
-  print 'principal: ', sum(p.principal for p in _properties)
-  print 'cgt owing: ', _cgt_owing
+  print 'balance', round(_balance)
+  print 'property value: ', round(sum(p.value for p in _properties))
+  print 'principal: ', round(sum(p.principal for p in _properties))
+  print 'cgt owing: ', round(_cgt_owing)
 
   _records.append(Record(title, _values))
 
@@ -236,10 +236,10 @@ def wait(period):
       income_factor[1] = factor
 
     deductions = 0
-    investment_income = 0
+    investment_income = alternative_yield
     for p in _properties:
       rental_income = p.value * p.rent() * RENTAL_YIELD / 12
-      investment_income = alternative_yield + rental_income
+      investment_income += rental_income
       deductible_investment_interest_due = p.principal * p.negative_gearing() * RATE / 12
       maintenance = p.value * MAINTENANCE_FACTOR / 12
       deductions += max(0, deductible_investment_interest_due + maintenance - rental_income)
@@ -271,7 +271,6 @@ def wait(period):
       interest_due = p.principal * RATE / 12
       p.principal -= capped_repayment - interest_due
 
-    for p in _properties:
       property_increase = p.value * CAPITAL_GROWTH / 12
       _cgt_owing += p.cgt() * income_tax_brackets[-1][1] * property_increase # Assume cgt will eventually be levied at highest bracket.
       p.value += property_increase
@@ -368,7 +367,7 @@ def compare_initial_property():
 
 def main():
   compare_initial_property()
-  compare_single_house_prices()
+  #compare_single_house_prices()
 
 if __name__ == '__main__':
   main()
