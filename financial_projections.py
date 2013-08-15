@@ -1,4 +1,3 @@
-# TODO: Minimum repayments
 # TODO: Increase in rent
 # TODO: More accurate maintenance costs
 # TODO: Startup
@@ -13,7 +12,7 @@ from os import system
 INITIAL_BALANCE = 150000
 DURATION = 25
 INFLATION = 0.03
-SALARY0 = 8000
+SALARY0 = 10000
 SALARY1 = 7000
 SALARY_INCREASE = INFLATION
 RATE = 0.07
@@ -30,8 +29,10 @@ SCHOOL_FEE_END_AGE = 18
 SCHOOL_FEE_INCREASE = INFLATION
 PRIVATE_SCHOOL_FEES = 30000
 
+DEFAULT_LOAN_DURATION = 25
+
 INITIAL_PROPERTY_VALUE = 200000
-INITIAL_PROPERTY_PRINCIPAL = 120000
+INITIAL_PROPERTY_PRINCIPAL = 100000
 
 MATERNITY_PERIOD = 0.5
 MATERNITY_SALARY_FACTOR = 0
@@ -40,6 +41,9 @@ HOME_CARE_SALARY_FACTOR = 0.5
 
 FIRST_CHILD_DELAY = 3
 SUBSEQUENT_CHILD_DELAY = 2
+
+def minimum_repayments(amount, duration):
+  return (RATE / 12) / (1 - (1 + RATE / 12) ** (-duration)) * amount
 
 def bracket_total(amount, brackets):
   due = 0
@@ -87,10 +91,11 @@ class Property(object):
   OCCUPY = 1
   INVESTMENT = 2
 
-  def __init__(self, use, value, principal):
+  def __init__(self, use, value, principal, minimum_repayment):
     self.use = use
     self.value = value
     self.principal = principal
+    self.minimum_repayment = minimum_repayment
 
     self.total_increase = 0
     self.total_rent = 0
@@ -129,7 +134,9 @@ _records = []
 
 def register_initial_property():
   global _properties
-  _properties.append(Property(Property.INVESTMENT, INITIAL_PROPERTY_VALUE, INITIAL_PROPERTY_PRINCIPAL))
+  _properties.append(
+      Property(Property.INVESTMENT, INITIAL_PROPERTY_VALUE, INITIAL_PROPERTY_PRINCIPAL,
+               minimum_repayments(INITIAL_PROPERTY_VALUE, DEFAULT_LOAN_DURATION * 12)))
 
 def run(title, program):
   clear()
@@ -187,7 +194,8 @@ def clear():
 def report():
   property = sum(p.value for p in _properties)
   principal = sum(p.principal for p in _properties)
-  _values.append(_balance + property - principal - _cgt_owing)
+  #_values.append(_balance + property - principal - _cgt_owing)
+  _values.append(_balance)
 
 def time():
   return _time
@@ -242,8 +250,6 @@ def wait(period):
         if _time >= FIRST_CHILD_DELAY * 12:
           have_child()
 
-    alternative_yield = _balance * ALTERNATIVE_YIELD / 12
-
     income_factor = [1.0, 1.0]
     if len(_children):
       time_since_last_child = _children[-1].age()
@@ -256,16 +262,42 @@ def wait(period):
       income_factor[1] = factor
 
     deductions = 0
-    investment_income = alternative_yield
+    investment_income = 0
+    # Assume that we have allocated all money to offset accounts to avoid interest, and any left over is in some other investment.
+    invested_money = _balance
     for p in _properties:
       rental_income = p.value * p.rent() * RENTAL_YIELD / 12
       p.total_rent += rental_income
+      # TODO: Subtract maintenance/interest
       investment_income += rental_income
-      interest_due = p.principal * RATE / 12
+
+      offset_portion = min(invested_money, p.principal)
+      invested_money -= offset_portion
+      interest_due = (p.principal - offset_portion) * RATE / 12
       maintenance = p.value * MAINTENANCE_FACTOR / 12
       negative_gearing_deduction = p.negative_gearing() * max(0, interest_due + maintenance - rental_income)
       p.total_negative_gearing += negative_gearing_deduction
       deductions += negative_gearing_deduction
+
+      repayment = min(p.principal, p.minimum_repayment)
+      _balance -= repayment
+
+      maintenance = p.value * MAINTENANCE_FACTOR / 12
+      p.total_maintenance += maintenance
+      _balance -= maintenance
+      p.total_interest_paid += interest_due
+      p.principal -= repayment - interest_due
+
+      property_increase = p.value * CAPITAL_GROWTH / 12
+      cgt = p.cgt() * income_tax_brackets[-1][1] * property_increase # Assume cgt will eventually be levied at highest bracket.
+      p.total_cgt += cgt
+      _cgt_owing += cgt
+      p.value += property_increase
+      p.total_increase += property_increase
+
+    alternative_yield = invested_money * ALTERNATIVE_YIELD / 12
+
+    investment_income += alternative_yield
 
     income = [s * f + investment_income / len(_salary) for s, f in zip(_salary, income_factor)]
     total_income = sum(income)
@@ -285,25 +317,6 @@ def wait(period):
     disposable_income = total_income - tax_payable - expenses - _rent - dependant_expenses - total_school_fees
     _balance += disposable_income
 
-    # TODO: make minimum repayments for all loans.
-    for p in _properties:
-      maintenance = p.value * MAINTENANCE_FACTOR / 12
-      p.total_maintenance += maintenance
-      _balance -= maintenance
-      repayment = _balance
-      capped_repayment = min(p.principal, repayment)
-      _balance -= capped_repayment
-      interest_due = p.principal * RATE / 12
-      p.total_interest_paid += interest_due
-      p.principal -= capped_repayment - interest_due
-
-      property_increase = p.value * CAPITAL_GROWTH / 12
-      cgt = p.cgt() * income_tax_brackets[-1][1] * property_increase # Assume cgt will eventually be levied at highest bracket.
-      p.total_cgt += cgt
-      _cgt_owing += cgt
-      p.value += property_increase
-      p.total_increase += property_increase
-
     report()
 
 def select_private_school():
@@ -314,9 +327,11 @@ def buy_property(use, price):
   global _balance
 
   total = price + stamp_duty(price)
-  loan_amount = max(0, total - _balance)
+  # TODO: deposit
+  #loan_amount = max(0, total - _balance)
+  loan_amount = total
   _balance += loan_amount
-  _properties.append(Property(use, price, loan_amount))
+  _properties.append(Property(use, price, loan_amount, minimum_repayments(loan_amount, DEFAULT_LOAN_DURATION * 12)))
   pay(total)
 
   # Sort occupied properties first so that we prefer to pay off
