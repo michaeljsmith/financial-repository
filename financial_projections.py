@@ -319,6 +319,10 @@ def buy_property(use, price):
   _properties.append(Property(use, price, loan_amount))
   pay(total)
 
+  # Sort occupied properties first so that we prefer to pay off
+  # non-negative-geared loans.
+  _properties.sort(key=lambda p: p.use)
+
 def sell_property(property_index):
   global _balance
 
