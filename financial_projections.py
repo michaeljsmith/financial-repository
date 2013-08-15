@@ -91,6 +91,13 @@ class Property(object):
     self.value = value
     self.principal = principal
 
+    self.total_increase = 0
+    self.total_rent = 0
+    self.total_cgt = 0
+    self.total_negative_gearing = 0
+    self.total_interest_paid = 0
+    self.total_maintenance = 0
+
   def cgt(self):
     if self.use == Property.INVESTMENT:
       return 1.0
@@ -133,11 +140,21 @@ def run(title, program):
   wait(DURATION * 12 - _time)
 
   print
+
   print title
   print 'balance', round(_balance)
   print 'property value: ', round(sum(p.value for p in _properties))
   print 'principal: ', round(sum(p.principal for p in _properties))
   print 'cgt owing: ', round(_cgt_owing)
+
+  for i, p in enumerate(_properties):
+    print '  property %d:' % (i,)
+    print '    total capital gain: %d' % (p.total_increase,)
+    print '    total rent earned: %d' % (p.total_rent,)
+    print '    total cgt payable: %d' % (p.total_cgt,)
+    print '    total negative gearing deduction: %d' % (p.total_negative_gearing,)
+    print '    total maintenance: %d' % (p.total_maintenance,)
+    print '    total interest paid: %d' % (p.total_interest_paid,)
 
   _records.append(Record(title, _values))
 
@@ -239,10 +256,13 @@ def wait(period):
     investment_income = alternative_yield
     for p in _properties:
       rental_income = p.value * p.rent() * RENTAL_YIELD / 12
+      p.total_rent += rental_income
       investment_income += rental_income
-      deductible_investment_interest_due = p.principal * p.negative_gearing() * RATE / 12
+      interest_due = p.principal * RATE / 12
       maintenance = p.value * MAINTENANCE_FACTOR / 12
-      deductions += max(0, deductible_investment_interest_due + maintenance - rental_income)
+      negative_gearing_deduction = p.negative_gearing() * max(0, interest_due + maintenance - rental_income)
+      p.total_negative_gearing += negative_gearing_deduction
+      deductions += negative_gearing_deduction
 
     income = [s * f + investment_income / len(_salary) for s, f in zip(_salary, income_factor)]
     total_income = sum(income)
@@ -264,16 +284,22 @@ def wait(period):
 
     # TODO: make minimum repayments for all loans.
     for p in _properties:
-      _balance -= p.value * MAINTENANCE_FACTOR / 12
+      maintenance = p.value * MAINTENANCE_FACTOR / 12
+      p.total_maintenance += maintenance
+      _balance -= maintenance
       repayment = _balance
       capped_repayment = min(p.principal, repayment)
       _balance -= capped_repayment
       interest_due = p.principal * RATE / 12
+      p.total_interest_paid += interest_due
       p.principal -= capped_repayment - interest_due
 
       property_increase = p.value * CAPITAL_GROWTH / 12
-      _cgt_owing += p.cgt() * income_tax_brackets[-1][1] * property_increase # Assume cgt will eventually be levied at highest bracket.
+      cgt = p.cgt() * income_tax_brackets[-1][1] * property_increase # Assume cgt will eventually be levied at highest bracket.
+      p.total_cgt += cgt
+      _cgt_owing += cgt
       p.value += property_increase
+      p.total_increase += property_increase
 
     report()
 
