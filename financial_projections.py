@@ -283,39 +283,50 @@ def buy_property(use, price):
   _properties.append(Property(use, price, loan_amount))
   pay(total)
 
-def single_rented_house(value):
-  def program():
-    rent_home(value)
-  return program
+PLOT_SIZE = (640, 480)
+SCREEN_WIDTH = 2000
 
-def single_house(value):
-  def program():
-    buy_property(Property.OCCUPY, value)
-  return program
+_plot_position = (0, 0)
 
-def foo():
-  set_desired_children(2)
-  select_private_school()
-  rent_home(750000)
-  buy_property(Property.INVESTMENT, 750000)
+def plot_runs(run_defs):
+  global _records
+  global _plot_position
+  _records = []
 
-def main():
-  run('rent house $750000', single_rented_house(750000))
-  run('single house $750000', single_house(750000))
-  run('single house $650000', single_house(650000))
-  run('foo', foo)
+  for title, run_def in run_defs:
+    run(title, run_def)
 
   with open('data', 'w') as data_file:
     for t, values in enumerate(zip(*[r.values for r in _records])):
       data_file.write('\t'.join([str(t / 12.0)] + [str(v) for v in values]) + '\n')
 
   with open('plot.gp', 'w') as script:
+    script.write('set terminal x11 size %d,%d position %d,%d\n' % (PLOT_SIZE[0], PLOT_SIZE[1], _plot_position[0], _plot_position[1]))
     script.write('plot \\\n')
     script.write(', \\\n'.join(
       '  \'data\' using 1:' + str(i + 2) + ' title \'' + record.title + '\' with lines'
         for i, record in enumerate(_records)))
 
   system('gnuplot -persist plot.gp')
+
+  _plot_position = _plot_position[0] + PLOT_SIZE[0], _plot_position[1]
+  if _plot_position[0] + PLOT_SIZE[0] > SCREEN_WIDTH:
+    _plot_position = 0, _plot_position[1] + PLOT_SIZE[1]
+
+def compare_single_house_prices():
+  def single_house(value):
+    def program():
+      set_desired_children(2)
+      select_private_school()
+      buy_property(Property.OCCUPY, value)
+    return program
+
+  plot_runs([
+    ('single house $750000', single_house(750000)),
+    ('single house $650000', single_house(650000))])
+
+def main():
+  compare_single_house_prices()
 
 if __name__ == '__main__':
   main()
