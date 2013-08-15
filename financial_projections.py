@@ -1,9 +1,10 @@
-# TODO: Increase in rent
 # TODO: Multiple investment properties
 # TODO: Initial investment property
+# TODO: Increase in rent
 # TODO: Renovations
 # TODO: Index tax brackets
 # TODO: Land value increase v house value
+# TODO: Pay cgt on sale to allow compensating deductions
 
 from os import system
 
@@ -77,14 +78,35 @@ class Child(object):
   def age(self):
     return time() - self.birth
 
+class Property(object):
+  OCCUPY = 1
+  INVESTMENT = 2
+
+  def __init__(self, use, value, principal):
+    self.use = use
+    self.value = value
+    self.principal = principal
+
+  def cgt(self):
+    if self.use == Property.INVESTMENT:
+      return 1.0
+    return 0.0
+
+  def rent(self):
+    if self.use == Property.INVESTMENT:
+      return 1.0
+    return 0.0
+
+  def negative_gearing(self):
+    if self.use == Property.INVESTMENT:
+      return 1.0
+    return 0.0
+
 _time = 0
 _balance = 0
 _salary = [0, 0]
 _rent = 0
-_principal = 0
-_property = 0
-_investment_property = 0
-_investment_principal = 0
+_properties = []
 _desired_children = 0
 _cgt_owing = 0
 _children = []
@@ -109,12 +131,9 @@ def clear():
   global _balance
   global _values
   global _rent
-  global _principal
-  global _property
-  global _investment_property
-  global _investment_principal
   global _children
   global _school_fees
+  global _properties
   global _salary
   global _desired_children
   global _cgt_owing
@@ -123,10 +142,7 @@ def clear():
   _balance = INITIAL_BALANCE
   _salary = [0, 0]
   _rent = 0
-  _principal = 0
-  _property = 0
-  _investment_property = 0
-  _investment_principal = 0
+  _properties = []
   _school_fees = 0
   _desired_children = 0
   _children = []
@@ -134,7 +150,9 @@ def clear():
   _values = []
 
 def report():
-  _values.append(_balance + _property + _investment_property - _principal - _investment_principal - _cgt_owing)
+  property = sum(p.value for p in _properties)
+  principal = sum(p.principal for p in _properties)
+  _values.append(_balance + property - principal - _cgt_owing)
 
 def time():
   return _time
@@ -146,14 +164,6 @@ def pay(amount):
 def receive(amount):
   global _balance
   _balance += amount
-
-def gain_property(amount):
-  global _property
-  _property += amount
-
-def gain_investment_property(amount):
-  global _investment_property
-  _investment_property += amount
 
 def lose_property(amount):
   global _property
@@ -181,10 +191,7 @@ def set_school_fees(amount):
 def wait(period):
   global _balance
   global _time
-  global _principal
-  global _property
-  global _investment_property
-  global _investment_principal
+  global _properties
   global _salary
   global _cgt_owing
 
@@ -213,15 +220,18 @@ def wait(period):
 
       income_factor[1] = factor
 
-    rental_income = _investment_property * RENTAL_YIELD / 12
-    investment_income = alternative_yield + rental_income
-    investment_interest_due = _investment_principal * RATE / 12
+    deductions = 0
+    investment_income = 0
+    for p in _properties:
+      rental_income = p.value * p.rent() * RENTAL_YIELD / 12
+      investment_income = alternative_yield + rental_income
+      deductible_investment_interest_due = p.principal * p.negative_gearing() * RATE / 12
+      deductions += max(0, deductible_investment_interest_due - rental_income)
 
     income = [s * f + investment_income / len(_salary) for s, f in zip(_salary, income_factor)]
     total_income = sum(income)
-    deductions = max(0, investment_interest_due - rental_income)
     _salary = [s * (1 + (SALARY_INCREASE / 12)) for s in _salary]
-    tax_payable = sum(income_tax(max(0, i - deductions) * 12) / 12 for i in income)
+    tax_payable = sum(income_tax(max(0, i - deductions / len(_salary)) * 12) / 12 for i in income)
 
     total_expense_inflation = (1 + (EXPENSE_INCREASE / 12)) ** _time
     expense_per_child = INITIAL_EXPENSE_PER_CHILD * total_expense_inflation
@@ -236,59 +246,33 @@ def wait(period):
     disposable_income = total_income - tax_payable - expenses - _rent - dependant_expenses - total_school_fees
     _balance += disposable_income
 
-    # TODO: reorganize all loans into a single list.
     # TODO: make minimum repayments for all loans.
-    repayment = _balance
-    capped_repayment = min(_principal, repayment)
-    _balance -= capped_repayment
-    interest_due = _principal * RATE / 12
-    _principal -= capped_repayment - interest_due
+    for p in _properties:
+      repayment = _balance
+      capped_repayment = min(p.principal, repayment)
+      _balance -= capped_repayment
+      interest_due = p.principal * RATE / 12
+      p.principal -= capped_repayment - interest_due
 
-    repayment = _balance
-    capped_repayment = min(_investment_principal, repayment)
-    _balance -= capped_repayment
-    interest_due = _investment_principal * RATE / 12
-    _investment_principal -= capped_repayment - interest_due
-
-    _property += _property * (CAPITAL_GROWTH - MAINTENANCE_FACTOR) / 12
-    investment_property_increase = _investment_property * (CAPITAL_GROWTH - MAINTENANCE_FACTOR) / 12
-    _cgt_owing += income_tax_brackets[-1][1] * investment_property_increase # Assume cgt will eventually be levied at highest bracket.
-    _investment_property += investment_property_increase
+    for p in _properties:
+      property_increase = p.value * (CAPITAL_GROWTH - MAINTENANCE_FACTOR) / 12
+      _cgt_owing += p.cgt() * income_tax_brackets[-1][1] * property_increase # Assume cgt will eventually be levied at highest bracket.
+      p.value += property_increase
 
     report()
 
 def select_private_school():
   set_school_fees(PRIVATE_SCHOOL_FEES)
 
-def take_loan(amount):
-  global _principal
-  global _balance
-
-  _principal += amount
-  _balance += amount
-
-def buy_home(price):
-  total = price + stamp_duty(price)
-  loan_amount = max(0, total - _balance)
-  take_loan(loan_amount)
-  pay(total)
-  gain_property(price)
-
-def buy_investment_property(price):
-  global _investment_principal
+def buy_property(use, price):
+  global _properties
   global _balance
 
   total = price + stamp_duty(price)
   loan_amount = max(0, total - _balance)
-  _investment_principal += loan_amount
   _balance += loan_amount
+  _properties.append(Property(use, price, loan_amount))
   pay(total)
-  gain_investment_property(price)
-
-def sell_home():
-  value = _property
-  receive(value)
-  lose_property(value)
 
 def single_rented_house(value):
   def program():
@@ -297,19 +281,19 @@ def single_rented_house(value):
 
 def single_house(value):
   def program():
-    buy_home(value)
+    buy_property(Property.OCCUPY, value)
   return program
 
 def foo():
-  #set_desired_children(2)
+  set_desired_children(2)
   select_private_school()
-  rent_home(1750000)
-  buy_investment_property(750000)
+  rent_home(750000)
+  buy_property(Property.INVESTMENT, 750000)
 
 def main():
-  #run('rent house $750000', single_rented_house(750000))
-  run('single house $750000', single_house(1750000))
-  #run('single house $650000', single_house(650000))
+  run('rent house $750000', single_rented_house(750000))
+  run('single house $750000', single_house(750000))
+  run('single house $650000', single_house(650000))
   run('foo', foo)
 
   with open('data', 'w') as data_file:
