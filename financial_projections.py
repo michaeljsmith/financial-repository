@@ -1,3 +1,4 @@
+# TODO: Startup
 # TODO: Multiple investment properties
 # TODO: Initial investment property
 # TODO: Increase in rent
@@ -5,6 +6,7 @@
 # TODO: Index tax brackets
 # TODO: Land value increase v house value
 # TODO: Pay cgt on sale to allow compensating deductions
+# TODO: Superannuation
 
 from os import system
 
@@ -123,6 +125,13 @@ def run(title, program):
 
   program()
   wait(DURATION * 12 - _time)
+
+  print
+  print title
+  print 'balance', _balance
+  print 'property value: ', sum(p.value for p in _properties)
+  print 'principal: ', sum(p.principal for p in _properties)
+  print 'cgt owing: ', _cgt_owing
 
   _records.append(Record(title, _values))
 
