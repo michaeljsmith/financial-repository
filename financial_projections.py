@@ -1,6 +1,5 @@
+# TODO: More accurate maintenance costs
 # TODO: Startup
-# TODO: Multiple investment properties
-# TODO: Initial investment property
 # TODO: Increase in rent
 # TODO: Renovations
 # TODO: Index tax brackets
@@ -18,8 +17,8 @@ SALARY1 = 7000
 SALARY_INCREASE = INFLATION
 RATE = 0.07
 ALTERNATIVE_YIELD = 0.06 # TODO: Split into dividends + capital growth
-CAPITAL_GROWTH = 0.06 # Growth - costs (maintenance, insurance)
-MAINTENANCE_FACTOR = 0.02 # Growth - costs (maintenance, insurance)
+CAPITAL_GROWTH = 0.06
+MAINTENANCE_FACTOR = 0.01 # TODO: More accurate measure
 RENTAL_YIELD = 0.042 # Calculated only from single estimate
 INITIAL_MONTHLY_EXPENSES = 3000 # All costs not house-related
 EXPENSE_INCREASE = INFLATION
@@ -29,6 +28,9 @@ SCHOOL_FEE_START_AGE = 12
 SCHOOL_FEE_END_AGE = 18
 SCHOOL_FEE_INCREASE = INFLATION
 PRIVATE_SCHOOL_FEES = 30000
+
+INITIAL_PROPERTY_VALUE = 200000
+INITIAL_PROPERTY_PRINCIPAL = 80000
 
 MATERNITY_PERIOD = 0.5
 MATERNITY_SALARY_FACTOR = 0
@@ -116,6 +118,10 @@ _children = []
 _values = []
 
 _records = []
+
+def register_initial_property():
+  global _properties
+  _properties.append(Property(Property.INVESTMENT, INITIAL_PROPERTY_VALUE, INITIAL_PROPERTY_PRINCIPAL))
 
 def run(title, program):
   clear()
@@ -235,7 +241,8 @@ def wait(period):
       rental_income = p.value * p.rent() * RENTAL_YIELD / 12
       investment_income = alternative_yield + rental_income
       deductible_investment_interest_due = p.principal * p.negative_gearing() * RATE / 12
-      deductions += max(0, deductible_investment_interest_due - rental_income)
+      maintenance = p.value * MAINTENANCE_FACTOR / 12
+      deductions += max(0, deductible_investment_interest_due + maintenance - rental_income)
 
     income = [s * f + investment_income / len(_salary) for s, f in zip(_salary, income_factor)]
     total_income = sum(income)
@@ -257,6 +264,7 @@ def wait(period):
 
     # TODO: make minimum repayments for all loans.
     for p in _properties:
+      _balance -= p.value * MAINTENANCE_FACTOR / 12
       repayment = _balance
       capped_repayment = min(p.principal, repayment)
       _balance -= capped_repayment
@@ -264,7 +272,7 @@ def wait(period):
       p.principal -= capped_repayment - interest_due
 
     for p in _properties:
-      property_increase = p.value * (CAPITAL_GROWTH - MAINTENANCE_FACTOR) / 12
+      property_increase = p.value * CAPITAL_GROWTH / 12
       _cgt_owing += p.cgt() * income_tax_brackets[-1][1] * property_increase # Assume cgt will eventually be levied at highest bracket.
       p.value += property_increase
 
@@ -282,6 +290,15 @@ def buy_property(use, price):
   _balance += loan_amount
   _properties.append(Property(use, price, loan_amount))
   pay(total)
+
+def sell_property(property_index):
+  global _balance
+
+  p = _properties.pop(property_index)
+  # TODO: sale expenses
+  proceeds = p.value - p.principal
+  # CGT was paid as we went.
+  _balance += proceeds
 
 PLOT_SIZE = (640, 480)
 SCREEN_WIDTH = 2000
@@ -325,7 +342,32 @@ def compare_single_house_prices():
     ('single house $750000', single_house(750000)),
     ('single house $650000', single_house(650000))])
 
+def compare_initial_property():
+  def with_property():
+    register_initial_property()
+    set_desired_children(2)
+    select_private_school()
+    buy_property(Property.OCCUPY, 750000)
+
+  def sell():
+    register_initial_property()
+    sell_property(0)
+    set_desired_children(2)
+    select_private_school()
+    buy_property(Property.OCCUPY, 750000)
+
+  def without_property():
+    set_desired_children(2)
+    select_private_school()
+    buy_property(Property.OCCUPY, 750000)
+
+  plot_runs([
+    ('sell initial_property', sell),
+    ('with initial property', with_property),
+    ('without initial property', without_property)])
+
 def main():
+  compare_initial_property()
   compare_single_house_prices()
 
 if __name__ == '__main__':
