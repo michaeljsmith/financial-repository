@@ -13,13 +13,13 @@ INITIAL_BALANCE = 150000
 DURATION = 25
 INFLATION = 0.03
 SALARY0 = 10000
-SALARY1 = 7000
+SALARY1 = 7750
 SALARY_INCREASE = INFLATION
 RATE = 0.07
 ALTERNATIVE_YIELD = 0.06 # TODO: Split into dividends + capital growth
-CAPITAL_GROWTH = 0.06
+CAPITAL_GROWTH = 0.04 # TODO: Split value into land and house
 MAINTENANCE_FACTOR = 0.02 # TODO: More accurate measure
-RENTAL_YIELD = 0.042 # Calculated only from single estimate
+RENTAL_YIELD = 0.035
 INITIAL_MONTHLY_EXPENSES = 3000 # All costs not house-related
 EXPENSE_INCREASE = INFLATION
 INITIAL_EXPENSE_PER_CHILD = 1000
@@ -31,8 +31,8 @@ PRIVATE_SCHOOL_FEES = 30000
 
 DEFAULT_LOAN_DURATION = 25
 
-INITIAL_PROPERTY_VALUE = 200000
-INITIAL_PROPERTY_PRINCIPAL = 100000
+INITIAL_PROPERTY_VALUE = 250000
+INITIAL_PROPERTY_PRINCIPAL = 150000
 
 MATERNITY_PERIOD = 0.5
 MATERNITY_SALARY_FACTOR = 0
@@ -41,6 +41,9 @@ HOME_CARE_SALARY_FACTOR = 0.5
 
 FIRST_CHILD_DELAY = 3
 SUBSEQUENT_CHILD_DELAY = 2
+
+def deposit_size(price):
+  return price * 0.1
 
 def minimum_repayments(amount, duration):
   return (RATE / 12) / (1 - (1 + RATE / 12) ** (-duration)) * amount
@@ -141,6 +144,7 @@ def register_initial_property():
 def run(title, program):
   clear()
 
+  register_initial_property()
   take_job(0, SALARY0)
   take_job(1, SALARY1)
 
@@ -194,7 +198,9 @@ def clear():
 def report():
   property = sum(p.value for p in _properties)
   principal = sum(p.principal for p in _properties)
-  _values.append(_balance + property - principal - _cgt_owing)
+  #_values.append(_balance + property - principal - _cgt_owing)
+  #_values.append(principal)
+  _values.append(_balance)
 
 def time():
   return _time
@@ -325,21 +331,24 @@ def buy_property(use, price):
   global _balance
 
   total = price + stamp_duty(price)
+  deposit = deposit_size(price)
   # TODO: deposit
-  #loan_amount = max(0, total - _balance)
-  loan_amount = total
+  loan_amount = max(0, total - deposit)
   _balance += loan_amount
-  _properties.append(Property(use, price, loan_amount, minimum_repayments(loan_amount, DEFAULT_LOAN_DURATION * 12)))
+  p = Property(use, price, loan_amount, minimum_repayments(loan_amount, DEFAULT_LOAN_DURATION * 12))
+  _properties.append(p)
   pay(total)
 
   # Sort occupied properties first so that we prefer to pay off
   # non-negative-geared loans.
   _properties.sort(key=lambda p: p.use)
 
-def sell_property(property_index):
+  return p
+
+def sell_property(p):
   global _balance
 
-  p = _properties.pop(property_index)
+  _properties.remove(p)
   # TODO: sale expenses
   proceeds = p.value - p.principal
   # CGT was paid as we went.
@@ -375,45 +384,30 @@ def plot_runs(run_defs):
   if _plot_position[0] + PLOT_SIZE[0] > SCREEN_WIDTH:
     _plot_position = 0, _plot_position[1] + PLOT_SIZE[1]
 
-def compare_single_house_prices():
-  def single_house(value):
-    def program():
-      set_desired_children(2)
-      select_private_school()
-      buy_property(Property.OCCUPY, value)
-    return program
+def buy_house_then_move(num_children, first_house_value, first_house_duration, second_house_value, sell_initial_property=False):
+  def program():
+    if sell_initial_property:
+      sell_property(_properties[0])
+    set_desired_children(num_children)
+    select_private_school()
+    p = buy_property(Property.OCCUPY, first_house_value)
+    wait(first_house_duration)
+    sell_property(p)
+    buy_property(Property.OCCUPY, second_house_value)
+  return program
 
+def compare_num_children():
+
+  first_house_value = 750000
+  first_house_duration = 10 * 12
+  second_house_value = 1000000
   plot_runs([
-    ('single house $750000', single_house(750000)),
-    ('single house $650000', single_house(650000))])
-
-def compare_initial_property():
-  def with_property():
-    register_initial_property()
-    set_desired_children(2)
-    select_private_school()
-    buy_property(Property.OCCUPY, 650000)
-
-  def sell():
-    register_initial_property()
-    sell_property(0)
-    set_desired_children(2)
-    select_private_school()
-    buy_property(Property.OCCUPY, 650000)
-
-  def without_property():
-    set_desired_children(2)
-    select_private_school()
-    buy_property(Property.OCCUPY, 650000)
-
-  plot_runs([
-    ('sell initial_property', sell),
-    ('with initial property', with_property),
-    ('without initial property', without_property)])
+    ('1 child', buy_house_then_move(1, first_house_value, first_house_duration, second_house_value)),
+    ('with initial property', buy_house_then_move(2, first_house_value, first_house_duration, second_house_value)),
+    ('without initial property', buy_house_then_move(3, first_house_value, first_house_duration, second_house_value))])
 
 def main():
-  compare_initial_property()
-  #compare_single_house_prices()
+  compare_num_children()
 
 if __name__ == '__main__':
   main()
